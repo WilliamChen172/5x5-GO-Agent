@@ -9,8 +9,8 @@ from host import GO
 
 
 class MyGO():
-    def __init__(self):
-        self.size = 5
+    def __init__(self, size):
+        self.size = size
         self.komi = 2.5
         self.move = 0
         self.max_move = 24
@@ -108,10 +108,10 @@ class MyGO():
         # board = self.board
 
         ally_members = self.ally_dfs(i, j, board)
-        if board[0][0] == 2 and board[1][0] == 1 and board[0][1] == 1:
-            print(i, j)
-            print(ally_members)
-            go.visualize_board(board)
+        # if board[0][0] == 2 and board[1][0] == 1 and board[0][1] == 1:
+            # print(i, j)
+            # print(ally_members)
+            # go.visualize_board(board)
         for member in ally_members:
             neighbors = self.detect_neighbor(member[0], member[1])
             for piece in neighbors:
@@ -151,10 +151,10 @@ class MyGO():
         died_pieces = self.find_died_pieces(piece_type, board)
         if not died_pieces:
             return []
-        print("died: ", died_pieces)
+        # print("died: ", died_pieces)
         for piece in died_pieces:
             board[piece[0]][piece[1]] = 0
-        go.visualize_board(board)
+        # go.visualize_board(board)
         return died_pieces
 
     def remove_certain_pieces(self, positions, board):
@@ -280,14 +280,32 @@ class MyGO():
                     cnt += 1
         return cnt
 
+    def is_territory(self, piece_type, i, j, board):
+        isEmpty = False
+        up = False
+        down = False
+        left = False
+        right = False
+        if board[i][j] == 0: isEmpty = True
+        if (i > 0 and board[i - 1][j] == piece_type) or i == 0:
+            up = True
+        if (i < len(board) - 1 and board[i + 1][j] == piece_type) or i == len(board) - 1:
+            down = True
+        if (j > 0 and board[i][j - 1] == piece_type) or j == 0:
+            left = True
+        if (j < len(board) - 1 and board[i][j + 1] == piece_type) or j == len(board) - 1:
+            right = True
+        return isEmpty and up and down and left and right
+
     def reward(self, piece_type, board):
         score = 0
         for i in range(self.size):
             for j in range(self.size):
-                if board[i][j] == piece_type:
+                if board[i][j] == piece_type or self.is_territory(piece_type, i, j, board):
                     score += 1
-                elif board[i][j] != 0:
-                    score -= 1
+
+        # print("Score:", score, "\n")
+        # go.visualize_board(board)
         return score
 
     def visualize_board(self, board):
@@ -322,7 +340,7 @@ class Minimax:
         self.root = root
 
     def run(self, depth, cur_node):
-        # print("start: ", depth)
+        # print("depth: ", depth)
         type = cur_node.type
         board = cur_node.board
         go = self.go
@@ -339,12 +357,14 @@ class Minimax:
         next_layer = []
         new_type = 3 - type
         for (i, j) in possible_placements:
+            stone = "O"
+            if type == 1:
+                stone = "X"
+            # print("Placing", stone, "at", i, j, "...")
             new_board = go.place(i, j, type, board)
+            # go.visualize_board(new_board)
+            # print("Calculating reward...")
             new_reward = go.reward(self.root.type, new_board)
-            # if new_board[0][1] == 1 and new_board[1][0] == 1:
-            #     print("run")
-            #     go.visualize_board(new_board)
-            #     print(new_reward)
             new_child = Node(new_board, new_reward, new_type, (i, j))
             new_child.parent = cur_node
             next_layer.append(new_child)
@@ -377,24 +397,40 @@ class Minimax:
                     node.reward = child.reward
 
     def select_path(self):
-        for child in self.root.children:
-            go.visualize_board(child.board)
-            print(child.reward)
+        # Debug
+        # for child in self.root.children:
+            # go.visualize_board(child.board)
+            # for c in child.children:
+                # for ch in c.children:
+                #     print("depth 3 reward: ", ch.reward)
+                # print("  depth 2 reward: ", c.reward)
+            # print("    depth 1 reward: ", child.reward)
+
+        # Pick the child with maximum reward. If multiple children share
+        #  the same maximum reward, apply second selection method
         next_node = random.choice(self.root.children)
         next_reward = -24
+        max_reward_children = []
         for child in self.root.children:
             if child.reward > next_reward:
-                next_node = child
+                max_reward_children = [child]
                 next_reward = child.reward
+            elif child.reward == next_reward:
+                max_reward_children.append(child)
+        if len(max_reward_children) == 1:
+            next_node = max_reward_children[0]
+        else:
+            next_node = random.choice(max_reward_children)
         print(next_node.step)
         return next_node.step
 
 
 class MyPlayer:
-    def __init__(self):
+    def __init__(self, depth):
         self.type = 'random'
+        self.depth = depth
 
-    def get_input(self, go, piece_type):
+    def get_input(self, go, piece_type, board):
         '''
         Get one input.
 
@@ -409,15 +445,17 @@ class MyPlayer:
                     possible_placements.append((i, j))
         if not possible_placements:
             return "Pass"
-
+        # print(possible_placements)
+        if len(possible_placements) == 25:
+            return (2, 2)
         root = Node(go.board, 0, piece_type, None)
         minimax = Minimax(go, root)
-        root.children = minimax.run(3, minimax.root)
+        root.children = minimax.run(self.depth, minimax.root)
         minimax.update_reward(minimax.root)
         return minimax.select_path()
 
 
-def readInput(n, path="init/input.txt"):
+def readInput(n, path="input.txt"):
     with open(path, 'r') as f:
         lines = f.readlines()
 
@@ -432,8 +470,8 @@ def readInput(n, path="init/input.txt"):
 if __name__ == "__main__":
     N = 5
     piece_type, previous_board, board = readInput(N)
-    go = MyGO()
+    go = MyGO(N)
     go.set_board(piece_type, previous_board, board)
-    player = MyPlayer()
-    action = player.get_input(go, piece_type)
+    player = MyPlayer(depth=3)
+    action = player.get_input(go, piece_type, board)
     writeOutput(action)
