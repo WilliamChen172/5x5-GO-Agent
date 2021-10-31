@@ -26,4 +26,5 @@ def readOutput(path="output.txt"):
 
         x = int(position[0])
         y = int(position[1])
+        # print(x, y)
     return "MOVE", x, y
