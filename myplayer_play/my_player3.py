@@ -209,11 +209,11 @@ class MyGO():
                     if board[i][j] == piece_type:
                         score += 1
                     # if self.is_territory(piece_type, i, j, board):
-                    #     score += 0.5
+                    #     score += 0.3
                     if board[i][j] == 3 - piece_type:
                         score -= 1
                     # if self.is_territory(3 - piece_type, i, j, board):
-                    #     score -= 0.5
+                    #     score -= 0.3
         if piece_type == 2:
             for i in range(self.size):
                 for j in range(self.size):
@@ -225,8 +225,6 @@ class MyGO():
 
         # Implement Benson's unconditional live
 
-        # print("Score:", score, "\n")
-        # go.visualize_board(board)
         return score
 
     def visualize_board(self, board):
@@ -279,8 +277,6 @@ class Minimax:
                 if go.valid_place_check(i, j, type, board) and go.has_neighbour(i, j, type, board):
                     psb_placements.append((i, j))
 
-        # print(go.valid_place_check(3, 1, 1, board))
-        # print(psb_placements)
         if not psb_placements:
             cur_node.reward = go.reward(self.root.type, cur_node.board)
             cur_node.best_path = [cur_node.step]
@@ -289,7 +285,6 @@ class Minimax:
         new_type = 3 - type
         if len(self.best_move) > 0 and self.best_move[0] in psb_placements:
             psb_placements.insert(0, psb_placements.pop(psb_placements.index(self.best_move.pop(0))))
-            # print(psb_placements, cur_node.step)
         for (i, j) in psb_placements:
             new_board = go.place(i, j, type, board)
             new_child = Node(new_board, new_type, (i, j))
@@ -297,12 +292,10 @@ class Minimax:
             if new_child.reward > cur_node.reward:
                 cur_node.reward = new_child.reward
                 cur_node.next_step = new_child.step
-                # print("max", depth)
                 if depth + 1 == self.depth:
                     cur_node.best_path = new_child.best_path
                 else:
                     cur_node.best_path = [cur_node.step] + new_child.best_path
-                # print(cur_node.best_path)
             if new_child.reward >= beta:
                 return cur_node
             if new_child.reward > alpha:
@@ -334,7 +327,6 @@ class Minimax:
         new_type = 3 - type
         if len(self.best_move) > 0 and self.best_move[0] in psb_placements:
             psb_placements.insert(0, psb_placements.pop(psb_placements.index(self.best_move.pop(0))))
-            # print(psb_placements, cur_node.step)
         for (i, j) in psb_placements:
             new_board = go.place(i, j, type, board)
             new_child = Node(new_board, new_type, (i, j))
@@ -342,12 +334,10 @@ class Minimax:
             if new_child.reward < cur_node.reward:
                 cur_node.reward = new_child.reward
                 cur_node.next_step = new_child.step
-                # print("min", depth)
                 if depth + 1 == self.depth:
                     cur_node.best_path = new_child.best_path
                 else:
                     cur_node.best_path = [cur_node.step] + new_child.best_path
-                # print(cur_node.best_path)
             if new_child.reward <= alpha:
                 return cur_node
             if new_child.reward < beta:
@@ -361,7 +351,6 @@ class Minimax:
             self.depth = i
             root = self.max_value(i, root, -1000, 1000)
             self.best_move = root.best_path
-            # print("id", self.best_move)
             elapsed_time = time.time() - start_time
             if elapsed_time >= 2000:
                 break
@@ -382,13 +371,10 @@ class MyPlayer:
         if len(possible_placements) == 25:
             return (2, 2)
         root = Node(go.board, piece_type, None)
-        # go.visualize_board(root.board)
         if moves < self.depth:
             self.depth = moves
         minimax = Minimax(go, root, self.depth)
         root = minimax.iterative_deepening(root)
-        print(root.next_step)
-        go.visualize_board(root.board)
         if not root.next_step:
             return "PASS"
         return root.next_step
@@ -440,10 +426,9 @@ if __name__ == "__main__":
     N = 5
     piece_type, previous_board, board = readInput(N)
     moves = readMoves(piece_type)
-    print(moves)
     go = MyGO(N)
     go.set_board(piece_type, previous_board, board)
-    player = MyPlayer(depth=6)
+    player = MyPlayer(depth=5)
     # cProfile.run("player.get_input(go, piece_type, board)")
     action = player.get_input(go, piece_type, board, moves)
     writeOutput(action)
